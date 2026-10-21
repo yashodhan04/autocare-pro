@@ -1,0 +1,64 @@
+# AutoCare Pro — .gitignore
+# Covers: Node.js dependencies, build outputs, environment files, logs, OS artefacts, and editor settings
+
+# ── Dependencies ───────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# ── Build outputs ──────────────────────────────────────────
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# ── Environment & secrets ──────────────────────────────────
+.env
+.env.local
+.env.*
+server/.env
+server/.env.local
+server/.env.*
+client/.env
+client/.env.local
+client/.env.*
+*.local
+!.env.example
+!server/.env.example
+!client/.env.example
+
+# ── Log files ──────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── Testing / coverage ─────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Operating-system-specific files ────────────────────────
+.DS_Store
+.DS_Store?
+._*
+[Tt]humbs.db
+[Ee]hthumbs.db
+[Dd]esktop.ini
+
+# ── Editors & IDEs ────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── Misc ──────────────────────────────────────────────────
+.cache/
+

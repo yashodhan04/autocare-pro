@@ -1,0 +1,296 @@
+/* ============================================================
+   AutoCare Pro — Global Stylesheet
+   Tailwind CSS v3 · Design System Foundation
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts (loaded in index.html) ──────────────────── */
+/* Inter: weights 300–800 | JetBrains Mono: 400–500           */
+
+/* ── Design Tokens ────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --lime:             #C8F135;
+  --lime-hover:       #B8E020;
+  --lime-muted:       #EAF9A0;
+  --charcoal:         #18191F;
+  --charcoal-mid:     #22262F;
+  --charcoal-soft:    #2C3140;
+  --charcoal-text:    #9BA3AF;
+
+  /* Surfaces */
+  --surface-page:     #F5F6F8;
+  --surface-card:     #FFFFFF;
+  --surface-muted:    #F0F1F4;
+
+  /* Text */
+  --text-primary:     #18191F;
+  --text-secondary:   #5A6070;
+  --text-muted:       #8B93A5;
+  --text-disabled:    #B8BDC9;
+  --text-inverse:     #FFFFFF;
+
+  /* Borders */
+  --border:           #E3E6ED;
+  --border-strong:    #C8CDD9;
+  --border-focus:     #C8F135;
+
+  /* Shadows */
+  --shadow-xs:        0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-sm:        0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-card:      0 1px 4px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-card-hover:0 6px 20px 0 rgba(0,0,0,0.10), 0 2px 6px -2px rgba(0,0,0,0.06);
+  --shadow-modal:     0 24px 64px 0 rgba(0,0,0,0.18), 0 8px 24px 0 rgba(0,0,0,0.10);
+  --shadow-nav:       4px 0 20px 0 rgba(0,0,0,0.20);
+  --shadow-focus-lime:0 0 0 3px rgba(200,241,53,0.35);
+  --shadow-focus-blue:0 0 0 3px rgba(37,99,235,0.20);
+
+  /* Radii */
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  10px;
+  --radius-xl:  14px;
+  --radius-card:12px;
+  --radius-pill:9999px;
+
+  /* Transitions */
+  --t-fast:     150ms cubic-bezier(0.4,0,0.2,1);
+  --t-base:     200ms cubic-bezier(0.4,0,0.2,1);
+  --t-slow:     300ms cubic-bezier(0.4,0,0.2,1);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+}
+
+/* ── Base Layer ───────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--surface-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  /* Accessible focus ring — lime for brand coherence */
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Remove default focus ring when mouse is used */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Heading defaults */
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+  }
+
+  p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+
+  img, svg, video {
+    display: block;
+    max-width: 100%;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    font: inherit;
+  }
+
+  input, textarea, select {
+    font: inherit;
+  }
+
+  code, kbd, pre, samp {
+    font-family: var(--font-mono);
+  }
+
+  /* Scrollbar (Webkit) */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: rgba(0,0,0,0.15); border-radius: var(--radius-pill); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ── Component Layer ──────────────────────────────────────── */
+@layer components {
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-medium text-body-sm leading-none
+           rounded-lg transition-all select-none
+           disabled:opacity-50 disabled:pointer-events-none
+           focus-visible:outline-none;
+  }
+  .btn:focus-visible {
+    box-shadow: var(--shadow-focus-lime);
+  }
+  .btn-sm  { @apply px-3 py-2 text-xs rounded-md; }
+  .btn-md  { @apply px-4 py-2.5; }
+  .btn-lg  { @apply px-6 py-3 text-base; }
+
+  .btn-primary {
+    @apply btn btn-md bg-brand-lime text-brand-charcoal font-semibold;
+  }
+  .btn-primary:hover:not(:disabled)  { background-color: var(--lime-hover); }
+  .btn-primary:active:not(:disabled) { @apply scale-[0.98]; }
+
+  .btn-secondary {
+    @apply btn btn-md bg-brand-charcoal text-text-inverse font-semibold;
+  }
+  .btn-secondary:hover:not(:disabled)  { @apply bg-brand-charcoal-soft; }
+  .btn-secondary:active:not(:disabled) { @apply scale-[0.98]; }
+
+  .btn-outline {
+    @apply btn btn-md bg-transparent text-text-primary font-medium
+           border border-border;
+  }
+  .btn-outline:hover:not(:disabled)  { @apply bg-surface-muted border-border-strong; }
+  .btn-outline:active:not(:disabled) { @apply scale-[0.98]; }
+
+  .btn-ghost {
+    @apply btn btn-md bg-transparent text-text-secondary font-medium;
+  }
+  .btn-ghost:hover:not(:disabled)  { @apply bg-surface-muted text-text-primary; }
+  .btn-ghost:active:not(:disabled) { @apply scale-[0.98]; }
+
+  .btn-danger {
+    @apply btn btn-md bg-danger text-white font-semibold;
+  }
+  .btn-danger:hover:not(:disabled)  { @apply bg-danger-text; }
+  .btn-danger:active:not(:disabled) { @apply scale-[0.98]; }
+  .btn-danger:focus-visible { box-shadow: var(--shadow-focus-red); }
+
+  .btn-icon {
+    @apply btn p-2 rounded-lg;
+  }
+  .btn-icon-sm { @apply btn p-1.5 rounded-md; }
+
+  /* ── Form Controls ───────────────────────────────────────── */
+  .form-input {
+    @apply w-full rounded-lg border border-border
+           bg-surface-card text-text-primary text-body-sm
+           px-3.5 py-2.5 leading-none
+           placeholder:text-text-muted
+           transition-[border-color,box-shadow] duration-150
+           disabled:bg-surface-muted disabled:text-text-disabled disabled:cursor-not-allowed
+           focus:outline-none;
+  }
+  .form-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow-focus-lime);
+  }
+  .form-input-error {
+    @apply border-danger;
+  }
+  .form-input-error:focus {
+    border-color: theme('colors.danger.DEFAULT');
+    box-shadow: var(--shadow-focus-red);
+  }
+
+  .form-label {
+    @apply block text-label text-text-primary mb-1.5 font-medium;
+  }
+  .form-helper {
+    @apply text-caption text-text-muted mt-1.5;
+  }
+  .form-error {
+    @apply text-caption text-danger mt-1.5 flex items-center gap-1;
+  }
+
+  /* ── Card ────────────────────────────────────────────────── */
+  .card {
+    @apply bg-surface-card rounded-card border border-border;
+    box-shadow: var(--shadow-card);
+  }
+  .card-hover {
+    @apply card transition-shadow duration-200;
+  }
+  .card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* ── Badge ───────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5
+           text-xs font-medium rounded-md leading-5;
+  }
+  .badge-pill { @apply badge rounded-pill; }
+
+  /* ── Skeleton ────────────────────────────────────────────── */
+  .skeleton {
+    @apply rounded-md bg-surface-muted;
+    background: linear-gradient(
+      90deg,
+      theme('colors.surface.muted') 25%,
+      theme('colors.border.DEFAULT') 37%,
+      theme('colors.surface.muted') 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider {
+    @apply border-t border-border my-6;
+  }
+}
+
+/* ── Utility Layer ────────────────────────────────────────── */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Inset border trick for focus rings on coloured backgrounds */
+  .ring-lime {
+    box-shadow: var(--shadow-focus-lime);
+  }
+  .ring-blue {
+    box-shadow: var(--shadow-focus-blue);
+  }
+}
