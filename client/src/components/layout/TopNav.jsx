@@ -5,14 +5,18 @@ import {
   LifeBuoy, Palette, X, ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../utils/cn.js';
-import { NAV_GROUPS } from '../../config/nav.config.js';
+import { navForRole } from '../../config/nav.config.js';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { useNotifications } from '../../context/NotificationContext.jsx';
+import { ROLE_LABELS, initials, formatDateTime } from '../../utils/format.js';
 
 /* ── Derive breadcrumb label from pathname ─────────────────── */
 function useBreadcrumbs() {
   const { pathname } = useLocation();
   const segments = pathname.replace(/^\/app\/?/, '').split('/').filter(Boolean);
 
-  const allItems = NAV_GROUPS.flatMap((g) => g.items);
+  const { role } = useAuth();
+  const allItems = navForRole(role).flatMap((g) => g.items);
 
   if (segments.length === 0) return [{ label: 'Dashboard' }];
 
@@ -26,34 +30,50 @@ function useBreadcrumbs() {
   });
 }
 
-/* ── Notification panel (empty state until backend is live) ── */
+/* ── Notification panel (live: loaded from API + Socket.IO) ── */
 function NotificationPanel({ onClose }) {
+  const { items, unread, markRead, markAllRead } = useNotifications();
   return (
     <div
-      className="absolute right-0 top-full mt-2 w-80 bg-surface-card rounded-2xl border border-border animate-scale-in origin-top-right"
+      className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] bg-surface-card rounded-2xl border border-border animate-scale-in origin-top-right"
       style={{ boxShadow: 'var(--shadow-modal)', zIndex: 200 }}
       role="dialog"
       aria-label="Notifications"
     >
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
-        <p className="text-body-sm font-semibold text-text-primary">Notifications</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-muted transition-colors"
-          aria-label="Close notifications"
-        >
-          <X size={15} aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
-        <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-text-muted mb-1">
-          <Bell size={20} aria-hidden="true" />
+        <p className="text-body-sm font-semibold text-text-primary">Notifications {unread > 0 && <span className="text-text-muted font-normal">({unread} new)</span>}</p>
+        <div className="flex items-center gap-1">
+          {unread > 0 && <button type="button" onClick={markAllRead} className="text-caption text-text-secondary hover:text-text-primary px-2 py-1 rounded-md hover:bg-surface-muted">Mark all read</button>}
+          <button type="button" onClick={onClose} className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-muted transition-colors" aria-label="Close notifications">
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
-        <p className="text-body-sm font-medium text-text-primary">No notifications yet</p>
-        <p className="text-caption text-text-muted max-w-[200px]">
-          Alerts and updates will appear here when modules are connected.
-        </p>
+      </div>
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+          <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-text-muted mb-1"><Bell size={20} aria-hidden="true" /></div>
+          <p className="text-body-sm font-medium text-text-primary">You're all caught up</p>
+          <p className="text-caption text-text-muted max-w-[220px]">Appointment, estimate, job and payment updates will appear here.</p>
+        </div>
+      ) : (
+        <ul className="max-h-80 overflow-y-auto divide-y divide-border">
+          {items.map((n) => (
+            <li key={n._id}>
+              <Link to={n.link || '/app/notifications'} onClick={() => { if (!n.read) markRead(n._id); onClose(); }}
+                className={cn('block px-4 py-3 hover:bg-surface-muted transition-colors', !n.read && 'bg-brand-lime-muted/30')}>
+                <p className="text-body-sm font-medium text-text-primary flex items-center gap-2">
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-brand-lime border border-brand-charcoal/20 shrink-0" aria-label="unread" />}
+                  {n.title}
+                </p>
+                {n.message && <p className="text-caption text-text-secondary mt-0.5">{n.message}</p>}
+                <p className="text-[11px] text-text-muted mt-1">{formatDateTime(n.createdAt)}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="border-t border-border px-4 py-2.5 text-center">
+        <Link to="/app/notifications" onClick={onClose} className="text-caption font-medium text-text-secondary hover:text-text-primary">View all notifications</Link>
       </div>
     </div>
   );
@@ -61,6 +81,7 @@ function NotificationPanel({ onClose }) {
 
 /* ── User profile menu ─────────────────────────────────────── */
 function UserMenu({ onClose }) {
+  const { user, logout } = useAuth();
   return (
     <div
       className="absolute right-0 top-full mt-2 w-64 bg-surface-card rounded-2xl border border-border animate-scale-in origin-top-right overflow-hidden"
@@ -68,45 +89,23 @@ function UserMenu({ onClose }) {
       role="menu"
       aria-label="User menu"
     >
-      {/* Profile summary */}
       <div className="px-4 py-3.5 border-b border-border bg-surface-muted/30">
-        <div className="flex items-center justify-between">
-          <p className="text-body-sm font-semibold text-text-primary leading-tight">Workshop Admin</p>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-brand-charcoal text-brand-lime">
-            Dev Mode
-          </span>
-        </div>
-        <p className="text-caption text-text-muted mt-0.5">admin@autocarepro.local</p>
-        <p className="text-[10px] text-text-muted mt-1">
-          Authentication system will be implemented in Module 1.
-        </p>
+        <p className="text-body-sm font-semibold text-text-primary leading-tight truncate">{user.name}</p>
+        <p className="text-caption text-text-muted mt-0.5 truncate">{user.email}</p>
+        <span className="inline-block mt-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-brand-charcoal text-brand-lime">{ROLE_LABELS[user.role]}</span>
       </div>
-
-      {/* Menu items */}
       <div className="py-1.5">
-        {[
-          { icon: User2,    label: 'Profile (Placeholder)',  href: '/app/profile' },
-          { icon: Settings, label: 'Settings (Placeholder)', href: '/app/settings' },
-          { icon: Palette,  label: 'Design System Showcase', href: '/design-system', external: false },
-        ].map(({ icon: Icon, label, href, external }) => (
-          <Link
-            key={label}
-            to={href}
-            onClick={onClose}
-            role="menuitem"
-            className="flex items-center gap-2.5 px-4 py-2 text-body-sm text-text-primary hover:bg-surface-muted transition-colors"
-          >
-            <Icon size={15} className="text-text-muted shrink-0" aria-hidden="true" />
-            <span className="flex-1">{label}</span>
-          </Link>
-        ))}
+        <Link to="/app/profile" onClick={onClose} role="menuitem" className="flex items-center gap-2.5 px-4 py-2 text-body-sm text-text-primary hover:bg-surface-muted transition-colors">
+          <User2 size={15} className="text-text-muted shrink-0" aria-hidden="true" /><span className="flex-1">My profile</span>
+        </Link>
+        <Link to="/design-system" onClick={onClose} role="menuitem" className="flex items-center gap-2.5 px-4 py-2 text-body-sm text-text-primary hover:bg-surface-muted transition-colors">
+          <Palette size={15} className="text-text-muted shrink-0" aria-hidden="true" /><span className="flex-1">Design system</span>
+        </Link>
       </div>
-
-      {/* Sign out */}
-      <div className="border-t border-border py-1.5 px-4">
-        <div className="text-[11px] text-text-muted py-1">
-          No active auth session to terminate.
-        </div>
+      <div className="border-t border-border py-1.5">
+        <button type="button" role="menuitem" onClick={() => { onClose(); logout(); }} className="flex w-full items-center gap-2.5 px-4 py-2 text-body-sm text-danger hover:bg-danger-light transition-colors">
+          <LogOut size={15} className="shrink-0" aria-hidden="true" /><span>Sign out</span>
+        </button>
       </div>
     </div>
   );
@@ -128,7 +127,8 @@ function SearchModal({ onClose }) {
     };
   }, [onClose]);
 
-  const allRoutes = NAV_GROUPS.flatMap((g) =>
+  const { role } = useAuth();
+  const allRoutes = navForRole(role).flatMap((g) =>
     g.items.map((item) => ({ ...item, group: g.groupLabel }))
   );
 
@@ -168,7 +168,7 @@ function SearchModal({ onClose }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Jump to route (e.g. Customers, Appointments, Inventory)…"
+            placeholder="Jump to a page (e.g. Customers, Appointments, Inventory)…"
             className="flex-1 bg-transparent text-body-sm text-text-primary placeholder:text-text-muted outline-none"
             aria-label="Search routes"
           />
@@ -227,7 +227,7 @@ function SearchModal({ onClose }) {
                   No matching route for &ldquo;{query}&rdquo;
                 </p>
                 <p className="text-caption text-text-muted max-w-sm">
-                  Full-text record search across customers, vehicles, and jobs will activate once MongoDB business modules are connected.
+                  Full-text record search across customers, vehicles, and jobs will activate once a record-search endpoint is added.
                 </p>
               </div>
             )
@@ -289,6 +289,8 @@ export function TopNav({ onMobileMenuOpen, sidebarCollapsed }) {
   const userRef  = useRef(null);
 
   const breadcrumbs = useBreadcrumbs();
+  const { user } = useAuth();
+  const { unread } = useNotifications();
 
   // Close menus on outside click
   useEffect(() => {
@@ -404,6 +406,11 @@ export function TopNav({ onMobileMenuOpen, sidebarCollapsed }) {
               aria-haspopup="dialog"
             >
               <Bell size={18} aria-hidden="true" />
+              {unread > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand-lime text-brand-charcoal text-[10px] font-bold flex items-center justify-center leading-none" aria-label={`${unread} unread`}>
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
             </button>
             {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
           </div>
@@ -423,9 +430,9 @@ export function TopNav({ onMobileMenuOpen, sidebarCollapsed }) {
             >
               {/* Avatar */}
               <div className="w-7 h-7 rounded-full bg-brand-charcoal flex items-center justify-center shrink-0">
-                <span className="text-[11px] font-bold text-brand-lime select-none">WA</span>
+                <span className="text-[11px] font-bold text-brand-lime select-none">{initials(user.name)}</span>
               </div>
-              <span className="hidden md:block text-body-sm font-medium text-text-primary">Admin</span>
+              <span className="hidden md:block text-body-sm font-medium text-text-primary max-w-[8rem] truncate">{user.name}</span>
               <ChevronDown size={13} className="hidden md:block text-text-muted" aria-hidden="true" />
             </button>
             {userOpen && <UserMenu onClose={() => setUserOpen(false)} />}

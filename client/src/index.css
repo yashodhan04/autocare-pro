@@ -294,3 +294,11 @@
     box-shadow: var(--shadow-focus-blue);
   }
 }
+
+/* ── Print: show only the printable document (e.g. an invoice) ── */
+@media print {
+  body * { visibility: hidden; }
+  #printable, #printable * { visibility: visible; }
+  #printable { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border: none !important; }
+  .no-print { display: none !important; }
+}

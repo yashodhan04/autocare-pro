@@ -3,25 +3,25 @@
 > **Course:** Web Technologies
 > **Project:** AutoCare Pro — Vehicle Service & Workshop Management System
 > **Language:** JavaScript (React frontend, Node.js/Express backend)
-> **Database:** MongoDB with Mongoose
+> **Database:** MySQL 8 (relational) accessed through the Sequelize ORM
 
 ---
 
 ## Implementation Note — Technology Differences
 
-The course assignments reference **PHP** and **MySQL**. This project uses equivalent but more industry-current technologies:
+The course assignments reference **PHP** and **MySQL**. This project uses **MySQL** for the database (as the course specifies) and Node.js instead of PHP for the server side:
 
 | Course Specification | This Project's Implementation      | Justification                                      |
 |----------------------|-------------------------------------|----------------------------------------------------|
 | PHP server-side      | Node.js + Express.js (JavaScript)   | Same server-side web role; more current technology |
-| MySQL relational DB  | MongoDB + Mongoose (NoSQL)          | Demonstrates document-based DB skills              |
-| PHP sessions         | JWT-based stateless auth (planned)  | Industry-standard alternative                      |
+| MySQL relational DB  | **MySQL 8** + Sequelize ORM         | Same database the course specifies                 |
+| PHP sessions         | Signed JWT in an httpOnly cookie    | Industry-standard alternative                      |
 
-All topics are covered in spirit. No claim is made that PHP/MySQL has been implemented — it has not.
+MySQL is used directly. PHP is **not** used — the server side is Node.js/Express — so no claim is made that PHP scripts exist.
 
 ---
 
-## Status Key
+## Status Key (original planning legend)
 
 | Status        | Meaning                                                   |
 |---------------|-----------------------------------------------------------|
@@ -252,12 +252,13 @@ All topics are covered in spirit. No claim is made that PHP/MySQL has been imple
 | **Status**           | Planned                                                                |
 
 **Coverage notes:**
-- **Implementation difference:** Course specifies MySQL; this project uses MongoDB + Mongoose.
-- Mongoose `Model.create()` — Create.
-- Mongoose `Model.find()`, `Model.findById()` — Read.
-- Mongoose `Model.findByIdAndUpdate()` — Update.
-- Mongoose `Model.findByIdAndDelete()` — Delete.
-- Mongoose schemas define types, required fields, defaults, and indexes.
+- **Database:** MySQL 8 via the Sequelize ORM (`mysql2` driver). Only the server-side language differs from the course (Node.js, not PHP).
+- Sequelize `Model.create()` — Create (`INSERT`).
+- Sequelize `Model.findAll()`, `findByPk()`, `findAndCountAll()` — Read (`SELECT`, with `JOIN`s via `include`).
+- Sequelize `instance.update()` / `Model.update()` — Update (`UPDATE`).
+- Sequelize `instance.destroy()` — Delete (`DELETE`); most records are soft-deleted (`isActive`) to keep history.
+- Models define column types, `NOT NULL`, defaults, unique constraints, indexes and foreign keys; multi-step operations (stock movements, payments, PO receiving) run in transactions with row locks (`SELECT … FOR UPDATE`).
+- Reports use hand-written SQL (`GROUP BY`, `JOIN`, aggregates) through `sequelize.query` with bound parameters.
 - No raw SQL is used anywhere.
 
 ---
@@ -294,8 +295,8 @@ All topics are covered in spirit. No claim is made that PHP/MySQL has been imple
 - URL patterns: `/api/v1/resources`, `/api/v1/resources/:id`.
 - All responses: `{ success, data, message, timestamp }`.
 - Zod middleware validates request body before controller runs.
-- Controller calls service; service calls Mongoose model.
-- MongoDB/Mongoose provides the persistence layer.
+- Controller calls service; service calls Sequelize model.
+- MySQL/Sequelize provides the persistence layer.
 
 ---
 
@@ -322,7 +323,7 @@ All topics are covered in spirit. No claim is made that PHP/MySQL has been imple
 | Node.js server                   | Express 5 on Node.js ≥ 20                         |
 | Express routing & middleware     | Modular routers, helmet, cors, morgan, errorHandler |
 | REST API                         | `/api/v1/` routes with JSON responses             |
-| Database CRUD                    | MongoDB + Mongoose (all resource modules)         |
+| Database CRUD                    | MySQL + Sequelize (all resource modules)          |
 | Real-time updates                | Socket.IO (stub ready, handlers planned)          |
 | Charts & reporting               | Recharts on dashboard                             |
 | Authentication                   | JWT (planned Module 1)                            |
@@ -331,3 +332,31 @@ All topics are covered in spirit. No claim is made that PHP/MySQL has been imple
 ---
 
 *Last updated: Step 1 — Scaffolding & Initialization*
+
+
+---
+
+## Implementation status & concrete locations (updated after the full build)
+
+Status values below are honest: **Implemented + exercised** means it runs in the app and is covered by the server integration tests (`server/src/tests`) and/or was driven end-to-end in a browser. Items needing faculty confirmation are flagged.
+
+| # | Concept | Where it is demonstrated | Status |
+|---|---|---|---|
+| 1 | Headings, lists, images, attributes | `client/src/pages/public/LandingPage.jsx` (h1–h3, `ul`/`ol`, `img` with `alt`, `href`, `src`, `width/height`), invoice document `InvoiceDetailPage.jsx` | Implemented |
+| 2 | Semantic HTML | Landing page (`header/nav/main/section/article/address/footer/figure`), `<time>` on dates, `<table><caption>/<th scope>` in data tables, `aria-*` labels, skip link | Implemented |
+| 3 | Inline / internal / external CSS | External: `client/src/index.css` + Tailwind. Inline `style` for dynamic values (chart box heights, shadows). Internal `<style>`-equivalent: SVG `<style>`-free inline attributes and `@media print` block in `index.css`. A literal `<style>` tag demo is not used because React/Tailwind replace it — **confirm with faculty** if a plain-HTML file is required | Implemented (adapted) |
+| 4 | Responsive: Flexbox, Grid, media queries | Tailwind `flex`/`grid` + breakpoints throughout; off-canvas mobile sidebar; tables collapse columns by breakpoint; verified at 375 px (no horizontal overflow) | Implemented |
+| 5 | CSS positioning & properties | `sticky` top bar and sidebar, `fixed` dialogs/toasts, `absolute` badges/notification dot, transitions, `@media print` for invoices | Implemented |
+| 6 | JS integration, events, array methods | `/lab` page (`LabDemoPage.jsx`: filter/map/reduce); `.map/.filter/.reduce` across list pages and report maths | Implemented |
+| 7 | Front-end functionality & form validation | `components/common/FieldsForm.jsx` (required, email, phone, numeric ranges, cross-field, server errors); estimate/PO/inspection forms | Implemented |
+| 8 | React SPA, functional components, JSX | `client/src` — React 19, React Router v7 nested layouts, lazy-loaded routes | Implemented |
+| 9 | Props, state, hooks, events, conditional rendering | `useState/useEffect/useMemo/useRef/useCallback`, custom hooks `useFetch/useList/useDebounce/useOptions`, Context (`Auth`, `Toast`, `Notification`), role-conditional UI | Implemented |
+| 10 | Fetch API & JSON | Axios wrapper `services/api.js` (JSON REST, `withCredentials`); the `/lab` page and `Fetch` semantics are the same underlying concept — **confirm if raw `fetch()` is mandated** | Implemented (axios) |
+| 11 | DOM manipulation & events | `/lab` page: `createElement/appendChild/classList.toggle/remove/addEventListener` with refs; the rest of the app is state-driven | Implemented |
+| 12 | Form processing, validation, string manipulation, sessions | Server: Zod validation + normalisation (uppercasing/stripping registration numbers, email lowercasing); `/lab` string demo; sessions = JWT httpOnly cookie, `sessionStorage` demo | Implemented. *PHP `$_SESSION` literally not used* |
+| 13 | Database connectivity & CRUD | Sequelize models in `server/src/models/index.js` (tables, foreign keys, indexes), CRUD for customers, vehicles, services, inventory, suppliers, users | Implemented + exercised (MySQL) |
+| 14 | Node/Express, routing, middleware, static resources | `server/src/app.js`, `routes/`, middleware (auth, validate, rate limit, errors); client `dist/` is static-hostable | Implemented + exercised |
+| 15 | REST APIs, JSON, DB, CRUD | `/api/v1/*`, Postman collection in `docs/postman/` | Implemented + exercised |
+| 16 | Integrated full-stack application | Whole project; end-to-end workflow test `server/src/tests/workflow.test.js` | Implemented + exercised |
+
+**Honesty notes:** MySQL *is* used. PHP was *not* used; the equivalent is Node.js/Express. Whether the original PHP exercises need separate demonstrations should be confirmed with faculty. Not implemented: inspection photo upload, e-mail/SMS delivery.

@@ -49,7 +49,7 @@ GET    /api/v1/auth/me
 PATCH  /api/v1/auth/change-password
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `User` — name, email, passwordHash, role, isActive, createdAt
 
 **Planned React features:**
@@ -75,7 +75,7 @@ DELETE /api/v1/customers/:id
 GET    /api/v1/customers/:id/vehicles
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Customer` — firstName, lastName, email, phone, address, notes, createdAt
 
 **Planned React features:**
@@ -101,7 +101,7 @@ DELETE /api/v1/vehicles/:id
 GET    /api/v1/vehicles/:id/service-history
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Vehicle` — make, model, year, vin, registration, colour, owner (ref: Customer), mileage
 
 **Planned React features:**
@@ -126,7 +126,7 @@ PATCH  /api/v1/appointments/:id
 DELETE /api/v1/appointments/:id
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Appointment` — vehicle, customer, advisor, scheduledAt, status, notes
 
 **Planned React features:**
@@ -153,7 +153,7 @@ POST   /api/v1/work-orders/:id/tasks
 PATCH  /api/v1/work-orders/:id/tasks/:taskId
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `WorkOrder` — appointment, vehicle, technician, tasks[], parts[], status, totalLabour, totalParts
 
 ---
@@ -176,7 +176,7 @@ DELETE /api/v1/inventory/:id
 GET    /api/v1/inventory/low-stock
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Part` — name, sku, category, quantity, reorderLevel, unitCost, supplier
 
 ---
@@ -198,7 +198,7 @@ PATCH  /api/v1/invoices/:id
 POST   /api/v1/invoices/:id/mark-paid
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Invoice` — workOrder, customer, lineItems[], subtotal, tax, total, status, dueDate
 
 ---
@@ -235,7 +235,7 @@ PATCH  /api/v1/notifications/:id/read
 DELETE /api/v1/notifications/:id
 ```
 
-**Planned Mongoose models:**
+**Planned Sequelize models:**
 - `Notification` — recipient, type, message, isRead, relatedEntity
 
 ---
@@ -277,7 +277,7 @@ server/src/
 ├── config/             # env.js, db.js (future), constants.js
 ├── controllers/        # Request/response; call service layer
 ├── middleware/         # auth, errorHandler, notFound, validate, rateLimit
-├── models/             # Mongoose schemas with indexes and validators
+├── models/             # Sequelize schemas with indexes and validators
 ├── routes/             # Express routers; bind paths to controllers
 ├── services/           # Business logic; call models
 ├── validation/         # Zod schemas for request bodies and params

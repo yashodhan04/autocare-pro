@@ -1,0 +1,42 @@
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import healthRouter from './health.route.js';
+import auth from './auth.routes.js';
+import users from './user.routes.js';
+import customers from './customer.routes.js';
+import vehicles from './vehicle.routes.js';
+import services from './service.routes.js';
+import appointments from './appointment.routes.js';
+import jobs from './job.routes.js';
+import inspections from './inspection.routes.js';
+import estimates from './estimate.routes.js';
+import inventory from './inventory.routes.js';
+import { suppliers, purchaseOrders } from './supplier.routes.js';
+import { invoices, payments } from './billing.routes.js';
+import { notifications, plans, reviews, audit, reports } from './misc.routes.js';
+
+const api = Router();
+api.use('/health', healthRouter);
+api.use('/auth', auth);
+
+// Everything below requires a valid session; each router adds its own role checks.
+api.use(authenticate);
+api.use('/users', users);
+api.use('/customers', customers);
+api.use('/vehicles', vehicles);
+api.use('/services', services);
+api.use('/appointments', appointments);
+api.use('/jobs', jobs);
+api.use('/inspections', inspections);
+api.use('/estimates', estimates);
+api.use('/inventory', inventory);
+api.use('/suppliers', suppliers);
+api.use('/purchase-orders', purchaseOrders);
+api.use('/invoices', invoices);
+api.use('/payments', payments);
+api.use('/notifications', notifications);
+api.use('/maintenance-plans', plans);
+api.use('/reviews', reviews);
+api.use('/audit-logs', audit);
+api.use('/reports', reports);
+export default api;

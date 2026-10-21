@@ -5,16 +5,11 @@
  * GET /api/v1/health/ready  — Reports whether the app is ready to serve
  *                             database-dependent requests.
  *
- * The readiness check inspects the Mongoose connection state so that when
- * MongoDB is connected in the next phase, this endpoint automatically reflects
- * the real state without any structural changes.
- *
- * Mongoose connection states:
- *   0 = disconnected | 1 = connected | 2 = connecting | 3 = disconnecting
+ * The readiness check runs `SELECT 1` against MySQL.
  */
 
 import { Router } from 'express';
-import mongoose from 'mongoose';
+import { sequelize } from '../config/db.js';
 
 const router = Router();
 
@@ -32,34 +27,15 @@ router.get('/', (_req, res) => {
 });
 
 // ── GET /api/v1/health/ready ───────────────────────────────────────────────
-router.get('/ready', (_req, res) => {
-  const dbState = mongoose.connection.readyState;
-
-  // Map Mongoose numeric state to a human-readable label
-  const stateLabels = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-  };
-
-  const dbStatus = stateLabels[dbState] ?? 'unknown';
-  const isReady = dbState === 1; // Only "connected" means ready
-
-  const statusCode = isReady ? 200 : 503;
-
-  res.status(statusCode).json({
+router.get('/ready', async (_req, res) => {
+  let dbStatus = 'connected';
+  try { await sequelize.query('SELECT 1'); } catch { dbStatus = 'disconnected'; }
+  const isReady = dbStatus === 'connected';
+  res.status(isReady ? 200 : 503).json({
     success: isReady,
     status: isReady ? 'ready' : 'not_ready',
-    message: isReady
-      ? 'Application is ready to handle requests'
-      : 'Application is not yet ready — database not connected',
-    checks: {
-      database: {
-        status: dbStatus,
-        connected: isReady,
-      },
-    },
+    message: isReady ? 'Application is ready to handle requests' : 'Application is not yet ready — database not reachable',
+    checks: { database: { status: dbStatus } },
     timestamp: new Date().toISOString(),
   });
 });

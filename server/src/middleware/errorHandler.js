@@ -1,35 +1,45 @@
 /**
- * errorHandler.js — Global error-handling middleware
- *
- * Must be registered LAST in the Express middleware chain (4 arguments).
- * Catches any error passed via next(err) and returns a structured JSON response.
+ * errorHandler.js — Global error-handling middleware (registered LAST).
+ * Normalises Zod / Sequelize / JWT / duplicate-key errors into the standard JSON envelope
+ * and never leaks SQL or internal error text for unexpected failures.
  */
 
+import { ZodError } from 'zod';
+import { ValidationError, UniqueConstraintError, ForeignKeyConstraintError, DatabaseError } from 'sequelize';
 import { config } from '../config/env.js';
 
-/**
- * @param {Error}                      err
- * @param {import('express').Request}  req
- * @param {import('express').Response} res
- * @param {import('express').NextFunction} _next  — required 4th param for Express to treat as error handler
- */
+function normalise(err) {
+  if (err instanceof ZodError) {
+    const details = err.issues.map((i) => ({ field: i.path.join('.'), message: i.message }));
+    return { status: 400, message: details[0] ? `${details[0].field ? details[0].field + ': ' : ''}${details[0].message}` : 'Validation failed', details };
+  }
+  if (err instanceof UniqueConstraintError) {
+    const field = err.errors?.[0]?.path?.replace(/^.*\./, '') ?? 'value';
+    return { status: 409, message: `A record with this ${field} already exists`, details: [{ field, message: 'must be unique' }] };
+  }
+  if (err instanceof ValidationError) {
+    const details = err.errors.map((e) => ({ field: e.path, message: e.message }));
+    return { status: 400, message: details[0]?.message ?? 'Validation failed', details };
+  }
+  if (err instanceof ForeignKeyConstraintError) return { status: 409, message: 'This record is referenced by other data or points to something that does not exist' };
+  if (err instanceof DatabaseError && /out of range/i.test(err.message)) return { status: 409, message: 'Value out of allowed range (e.g. stock cannot go below zero)' };
+  if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') return { status: 401, message: 'Invalid or expired session. Please sign in again.' };
+  if (err?.type === 'entity.parse.failed') return { status: 400, message: 'Malformed JSON body' };
+  if (err?.isOperational) return { status: err.statusCode, message: err.message, details: err.details };
+  return { status: 500, message: 'Something went wrong on our side. Please try again.' };
+}
+
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, _next) {
-  const statusCode = err.statusCode ?? err.status ?? 500;
+  const { status, message, details } = normalise(err);
+  if (status >= 500 && !config.isTest) console.error('[Error]', err);
 
-  // Log the full error in development; keep it quiet in production
-  if (config.isDevelopment) {
-    console.error('[Error]', err);
-  } else {
-    console.error(`[Error] ${statusCode} — ${err.message}`);
-  }
-
-  res.status(statusCode).json({
+  res.status(status).json({
     success: false,
-    status: statusCode,
-    message: err.message ?? 'Internal Server Error',
-    // Only expose stack trace in development
-    ...(config.isDevelopment && { stack: err.stack }),
+    status,
+    message,
+    ...(details && { details }),
+    ...(config.isDevelopment && status >= 500 && { stack: err.stack }),
     timestamp: new Date().toISOString(),
   });
 }
