@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar.jsx';
 import { TopNav } from '../components/layout/TopNav.jsx';
-import { ToastContainer, useToast } from '../components/ui/Toast.jsx';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
 
 /**
@@ -13,10 +12,8 @@ import { useMediaQuery } from '../hooks/useMediaQuery.js';
  *  - Off-canvas mobile drawer
  *  - Sticky top navigation bar
  *  - Main scrollable content area (via <Outlet />)
- *  - Global ToastContainer
  *
- * Children receive the toast API via React context in a later step;
- * for now the layout owns the toast state.
+ * Toasts come from ToastProvider (useToast() from context/ToastContext.jsx).
  */
 export default function AppLayout() {
   const isMobile = useMediaQuery('(max-width: 1023px)');
@@ -44,9 +41,6 @@ export default function AppLayout() {
   function handleMobileOpen()  { setMobileOpen(true);  }
   function handleMobileClose() { setMobileOpen(false); }
 
-  // Toast state at layout level so any child page can fire toasts
-  const { toasts, dismiss } = useToast();
-
   return (
     <div className="flex h-screen overflow-hidden bg-surface-page">
       {/* Sidebar */}
@@ -68,6 +62,7 @@ export default function AppLayout() {
         {/* Page content */}
         <main
           id="main-content"
+          aria-label="Page content"
           className="flex-1 overflow-y-auto overflow-x-hidden"
           tabIndex={-1}
         >
@@ -75,8 +70,6 @@ export default function AppLayout() {
         </main>
       </div>
 
-      {/* Global toast container */}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

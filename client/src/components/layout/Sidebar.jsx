@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Wrench, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../utils/cn.js';
-import { NAV_GROUPS } from '../../config/nav.config.js';
+import { navForRole } from '../../config/nav.config.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { Tooltip } from '../ui/Tooltip.jsx';
 
 /**
@@ -19,6 +20,8 @@ import { Tooltip } from '../ui/Tooltip.jsx';
  */
 export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const drawerRef = useRef(null);
+  const { role } = useAuth();
+  const groups = navForRole(role);
 
   // Close mobile drawer on Escape
   useEffect(() => {
@@ -87,7 +90,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
         className="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-none"
         aria-label="Main navigation"
       >
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.groupLabel} className="mb-1">
             {/* Group label — hidden when collapsed */}
             {(!collapsed || isMobile) && (

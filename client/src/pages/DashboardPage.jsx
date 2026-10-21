@@ -1,281 +1,147 @@
 import { Link } from 'react-router-dom';
-import {
-  Users,
-  Car,
-  Calendar,
-  ClipboardList,
-  Wrench,
-  Layers,
-  Activity,
-  ArrowRight,
-  Palette,
-  ExternalLink,
-  Info,
-  Clock,
-  Sparkles,
-  Database,
-  Radio,
-} from 'lucide-react';
-import { PageHeader } from '../components/layout/PageHeader.jsx';
-import { Card, SectionCard } from '../components/ui/Card.jsx';
-import { Button } from '../components/ui/Button.jsx';
+import { Users, Car, CalendarDays, ClipboardList, FileText, PackageX, Wallet, Receipt, BellRing, TrendingUp, Plus, ArrowRight, Clock, Wrench } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
+import { Page } from '../components/common/Page.jsx';
+import { LinkButton } from '../components/common/LinkButton.jsx';
+import { StatusBadge } from '../components/common/StatusBadge.jsx';
+import { MetricCard, SectionCard } from '../components/ui/Card.jsx';
 import { Badge } from '../components/ui/Badge.jsx';
-import { EmptyState } from '../components/ui/States.jsx';
+import { Button } from '../components/ui/Button.jsx';
+import { EmptyState, ErrorState } from '../components/ui/States.jsx';
+import { SkeletonCard, Skeleton } from '../components/ui/Skeleton.jsx';
+import { useFetch } from '../hooks/useFetch.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { formatDateTime, formatMoney, humanize } from '../utils/format.js';
 
-/**
- * DashboardPage — AutoCare Pro Workshop Operations Landing Page.
- *
- * Implements:
- *   A. Page Header (heading, description, actions)
- *   B. Quick Actions (navigates to respective module placeholder pages)
- *   C. Dashboard Content (Workshop overview, Appointments, Service jobs, Activity)
- *   D. Polished Empty States (honest explanations without fake statistics)
- */
+const Stat = ({ to, ...p }) => <Link to={to} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lime rounded-2xl"><MetricCard {...p} /></Link>;
+
+function AppointmentList({ items, showCustomer }) {
+  if (!items?.length) return <EmptyState compact title="No upcoming appointments" message="Booked appointments will show up here." />;
+  return (
+    <ul className="divide-y divide-border -my-2">{items.map((a) => (
+      <li key={a._id} className="py-3 flex items-center justify-between gap-3">
+        <div className="min-w-0"><p className="text-body-sm font-medium truncate">{a.service?.name} · {a.vehicle?.registrationNumber}</p><p className="text-caption text-text-muted">{formatDateTime(a.start)}{showCustomer && a.customer?.name ? ` · ${a.customer.name}` : ''}</p></div>
+        <StatusBadge status={a.status} />
+      </li>))}</ul>
+  );
+}
+
+function RevenueChart({ series }) {
+  const has = series.some((d) => d.revenue > 0);
+  if (!has) return <EmptyState compact icon={<TrendingUp size={22} />} title="No payments in the last 14 days" message="Revenue appears here as payments are recorded." />;
+  return (
+    <div className="h-56" role="img" aria-label="Revenue for the last 14 days">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={series} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+          <defs><linearGradient id="rev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C8F135" stopOpacity={0.7} /><stop offset="100%" stopColor="#C8F135" stopOpacity={0.05} /></linearGradient></defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E3E6ED" vertical={false} />
+          <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fontSize: 11, fill: '#8B93A5' }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: '#8B93A5' }} tickLine={false} axisLine={false} width={48} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />
+          <RTooltip formatter={(v) => [formatMoney(v), 'Revenue']} labelFormatter={(d) => d} />
+          <Area type="monotone" dataKey="revenue" stroke="#18191F" strokeWidth={2} fill="url(#rev)" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function StaffDashboard({ d }) {
+  const s = d.stats;
+  return (
+    <>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <Stat to="/app/customers" label="Customers" value={s.customers} icon={<Users size={18} />} />
+        <Stat to="/app/vehicles" label="Vehicles" value={s.vehicles} icon={<Car size={18} />} />
+        <Stat to="/app/appointments" label="Today's appointments" value={s.todayAppointments} icon={<CalendarDays size={18} />} />
+        <Stat to="/app/service-jobs" label="Active jobs" value={s.activeJobs} icon={<ClipboardList size={18} />} />
+        <Stat to="/app/estimates" label="Pending approvals" value={s.pendingEstimates} icon={<FileText size={18} />} />
+        <Stat to="/app/inventory" label="Inventory alerts" value={s.inventoryAlerts} icon={<PackageX size={18} />} iconColor={s.inventoryAlerts ? 'bg-warning-muted' : 'bg-brand-lime-muted'} />
+      </div>
+
+      {d.revenue && (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <SectionCard title="Revenue — last 14 days" subtitle="Payments received" className="lg:col-span-2"><RevenueChart series={d.revenue.series} /></SectionCard>
+          <div className="grid gap-4 content-start">
+            <MetricCard label="Revenue today" value={formatMoney(d.revenue.today)} icon={<Wallet size={18} />} />
+            <MetricCard label="Revenue this month" value={formatMoney(d.revenue.month)} icon={<TrendingUp size={18} />} />
+            <MetricCard label="Outstanding balance" value={formatMoney(d.revenue.outstanding)} icon={<Receipt size={18} />} iconColor="bg-warning-muted" />
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Upcoming appointments" action={<Link to="/app/appointments" className="text-caption font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1">View all <ArrowRight size={13} aria-hidden="true" /></Link>}><AppointmentList items={d.upcomingAppointments} showCustomer /></SectionCard>
+        <SectionCard title="Recent service activity" subtitle="Latest job status changes">
+          {d.recentActivity.length === 0 ? <EmptyState compact title="No activity yet" message="Job check-ins and status changes will appear here." /> : (
+            <ol className="space-y-3">{d.recentActivity.map((a, i) => (
+              <li key={i} className="flex gap-3"><span className="w-2 h-2 rounded-full bg-brand-lime border border-brand-charcoal/40 mt-2 shrink-0" aria-hidden="true" />
+                <div className="min-w-0"><p className="text-body-sm"><span className="font-mono font-semibold">{a.jobNo}</span> {a.vehicle && <span className="text-text-muted">({a.vehicle})</span>} → {humanize(a.to)}</p><p className="text-caption text-text-muted">{formatDateTime(a.at)}{a.note ? ` · ${a.note}` : ''}</p></div></li>))}</ol>)}
+        </SectionCard>
+      </div>
+    </>
+  );
+}
+
+function CustomerDashboard({ d }) {
+  const s = d.stats;
+  return (
+    <>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <Stat to="/app/vehicles" label="My vehicles" value={s.vehicles} icon={<Car size={18} />} />
+        <Stat to="/app/appointments" label="Upcoming bookings" value={s.upcomingAppointments} icon={<CalendarDays size={18} />} />
+        <Stat to="/app/estimates" label="Awaiting my approval" value={s.pendingEstimates} icon={<FileText size={18} />} iconColor={s.pendingEstimates ? 'bg-warning-muted' : 'bg-brand-lime-muted'} />
+        <Stat to="/app/invoices" label="Outstanding balance" value={formatMoney(s.outstandingBalance)} icon={<Receipt size={18} />} />
+      </div>
+      {s.pendingEstimates > 0 && <div className="rounded-2xl border-2 border-brand-lime bg-brand-lime-muted/40 p-4 flex flex-wrap items-center justify-between gap-3" role="status"><p className="font-medium">You have {s.pendingEstimates} estimate{s.pendingEstimates > 1 ? 's' : ''} waiting for your approval.</p><LinkButton to="/app/estimates" size="sm">Review now</LinkButton></div>}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Upcoming appointments" action={<LinkButton to="/app/appointments" size="sm" variant="outline" icon={<Plus size={14} />}>Book</LinkButton>}><AppointmentList items={d.upcomingAppointments} /></SectionCard>
+        <SectionCard title="Vehicles in the workshop">
+          {d.activeJobs.length === 0 ? <EmptyState compact icon={<Wrench size={22} />} title="Nothing in service" message="Active repair jobs appear here with live status." /> : (
+            <ul className="divide-y divide-border -my-2">{d.activeJobs.map((j) => <li key={j._id}><Link to={`/app/service-jobs/${j._id}`} className="py-3 flex items-center justify-between gap-3"><div><p className="text-body-sm font-medium">{j.vehicle?.make} {j.vehicle?.model} · {j.vehicle?.registrationNumber}</p><p className="text-caption text-text-muted font-mono">{j.jobNo}</p></div><StatusBadge status={j.status} /></Link></li>)}</ul>)}
+        </SectionCard>
+      </div>
+      <SectionCard title="Maintenance reminders" action={<Link to="/app/reminders" className="text-caption font-medium text-text-secondary hover:text-text-primary">All reminders</Link>}>
+        {d.reminders.length === 0 ? <EmptyState compact icon={<BellRing size={22} />} title="Nothing due" message="You're up to date. We'll remind you when a service is coming up." /> : (
+          <ul className="space-y-2">{d.reminders.map((r) => <li key={r._id} className="flex flex-wrap items-center justify-between gap-2 text-body-sm"><span>{r.title} — {r.vehicle?.registrationNumber}</span><span className="flex gap-1.5">{r.dueReasons.map((x) => <Badge key={x} variant="warning" size="sm">{x}</Badge>)}</span></li>)}</ul>)}
+      </SectionCard>
+    </>
+  );
+}
+
+function MechanicDashboard({ d }) {
+  const s = d.stats;
+  return (
+    <>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <Stat to="/app/workspace" label="Assigned jobs" value={s.assignedJobs} icon={<ClipboardList size={18} />} />
+        <Stat to="/app/workspace" label="In progress" value={s.inProgress} icon={<Wrench size={18} />} />
+        <Stat to="/app/workspace" label="At quality check" value={s.awaitingQuality} icon={<Clock size={18} />} />
+        <Stat to="/app/workspace" label="Parts pending" value={s.pendingParts} icon={<PackageX size={18} />} />
+      </div>
+      <SectionCard title="My active jobs" action={<LinkButton to="/app/workspace" size="sm" variant="outline">Open workspace</LinkButton>}>
+        {d.activeJobs.length === 0 ? <EmptyState compact title="No jobs assigned" message="New assignments appear here." /> : (
+          <ul className="divide-y divide-border -my-2">{d.activeJobs.map((j) => <li key={j._id}><Link to={`/app/service-jobs/${j._id}`} className="py-3 flex items-center justify-between gap-3"><div><p className="text-body-sm font-medium">{j.vehicle?.make} {j.vehicle?.model} · {j.vehicle?.registrationNumber}</p><p className="text-caption text-text-muted line-clamp-1">{j.jobNo} · {j.reportedProblem}</p></div><StatusBadge status={j.status} /></Link></li>)}</ul>)}
+      </SectionCard>
+    </>
+  );
+}
+
 export default function DashboardPage() {
-  const quickActions = [
-    {
-      id: 'customer',
-      title: 'Add Customer',
-      description: 'Register customer profile, contact details, and account preferences.',
-      path: '/app/customers',
-      icon: Users,
-      module: 'Module 2: In Planning',
-    },
-    {
-      id: 'vehicle',
-      title: 'Register Vehicle',
-      description: 'Add vehicle record with VIN, registration number, and service log.',
-      path: '/app/vehicles',
-      icon: Car,
-      module: 'Module 3: In Planning',
-    },
-    {
-      id: 'appointment',
-      title: 'Book Appointment',
-      description: 'Schedule a workshop booking, service bay allocation, and service type.',
-      path: '/app/appointments',
-      icon: Calendar,
-      module: 'Module 4: In Planning',
-    },
-    {
-      id: 'service-job',
-      title: 'Create Service Job',
-      description: 'Open a job card for repair tasks, technician assignment, and parts usage.',
-      path: '/app/service-jobs',
-      icon: ClipboardList,
-      module: 'Module 5: In Planning',
-    },
-  ];
+  const { user, role, hasRole } = useAuth();
+  const res = useFetch('/reports/dashboard');
+  const d = res.data;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const canAdd = hasRole('super_admin', 'workshop_admin', 'service_advisor');
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* ── Section A: Page Header ─────────────────────────────────────── */}
-      <PageHeader
-        title="Workshop Operations"
-        description="Central management hub for service bays, appointments, repair orders, and spare parts inventory."
-        badge={
-          <Badge variant="outline" color="lime" dot>
-            Step 3 Application Shell Active
-          </Badge>
-        }
-        actions={
-          <>
-            <Link to="/design-system" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm">
-                <Palette size={15} aria-hidden="true" />
-                <span>Design System</span>
-                <ExternalLink size={12} className="text-text-muted" aria-hidden="true" />
-              </Button>
-            </Link>
-          </>
-        }
-      />
-
-      {/* ── Architectural Notice Banner ───────────────────────────────── */}
-      <div className="rounded-2xl border border-brand-charcoal-soft bg-surface-card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-        <div className="flex items-start gap-3.5">
-          <div className="w-9 h-9 rounded-xl bg-brand-charcoal flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-            <Sparkles size={18} className="text-brand-lime" aria-hidden="true" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-body-sm font-semibold text-text-primary">
-                Application Shell &amp; Navigation Ready
-              </p>
-              <Badge variant="pill" color="neutral" size="sm">
-                Development Preview
-              </Badge>
-            </div>
-            <p className="text-caption text-text-muted mt-0.5 max-w-2xl">
-              The layout, dark sidebar, top navigation, search modal, and UI component system are operational.
-              Backend Mongoose business modules will be connected in subsequent steps without fabricating fake metrics.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-          <span className="text-caption font-mono text-text-muted flex items-center gap-1.5 bg-surface-muted px-2.5 py-1 rounded-lg border border-border">
-            <Database size={13} className="text-brand-charcoal-text" aria-hidden="true" />
-            MongoDB Ready
-          </span>
-          <span className="text-caption font-mono text-text-muted flex items-center gap-1.5 bg-surface-muted px-2.5 py-1 rounded-lg border border-border">
-            <Radio size={13} className="text-success" aria-hidden="true" />
-            Socket.IO Attached
-          </span>
-        </div>
-      </div>
-
-      {/* ── Section B: Quick Actions ──────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-text-primary">Quick Actions</h2>
-            <p className="text-caption text-text-muted">
-              Initiate workshop workflows (each links to its respective module roadmap)
-            </p>
-          </div>
-          <span className="text-caption text-text-muted">4 Actions Prepared</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={action.id}
-                to={action.path}
-                className="group relative rounded-2xl border border-border bg-surface-card p-4 transition-all duration-200 hover:border-brand-charcoal hover:shadow-card hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lime flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-surface-muted flex items-center justify-center text-text-primary group-hover:bg-brand-charcoal group-hover:text-brand-lime transition-colors">
-                      <Icon size={20} aria-hidden="true" />
-                    </div>
-                    <Badge variant="pill" color="neutral" size="sm">
-                      {action.module}
-                    </Badge>
-                  </div>
-                  <h3 className="text-body-sm font-semibold text-text-primary group-hover:text-brand-charcoal transition-colors">
-                    {action.title}
-                  </h3>
-                  <p className="text-caption text-text-muted mt-1 line-clamp-2">
-                    {action.description}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-caption font-medium text-text-primary group-hover:text-brand-charcoal">
-                  <span>View Module Plan</span>
-                  <ArrowRight
-                    size={14}
-                    className="text-text-muted group-hover:text-brand-charcoal group-hover:translate-x-0.5 transition-all"
-                    aria-hidden="true"
-                  />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Section C.1: Workshop Overview ────────────────────────────── */}
-      <SectionCard
-        title="Workshop Bay Overview & Lift Capacity"
-        subtitle="Real-time occupancy status across workshop service bays and inspection racks"
-        action={
-          <Badge variant="outline" color="neutral" size="sm">
-            Module 5 Target
-          </Badge>
-        }
-      >
-        <EmptyState
-          icon={Layers}
-          title="Service Bay Tracking Inactive"
-          description="Live bay occupancy, lift allocation, and technician scheduling will populate here automatically once Work Orders & Service Jobs (Module 5) are persisted in MongoDB."
-          action={
-            <Link to="/app/service-jobs">
-              <Button variant="outline" size="sm">
-                View Service Jobs Plan
-              </Button>
-            </Link>
-          }
-        />
-      </SectionCard>
-
-      {/* ── Section C.2 & C.3: Two-Column Section (Appointments & Service Jobs) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Appointments Section */}
-        <SectionCard
-          title="Today's Appointments"
-          subtitle="Scheduled customer vehicle drop-offs and consultations"
-          action={
-            <Badge variant="outline" color="neutral" size="sm">
-              Module 4
-            </Badge>
-          }
-        >
-          <EmptyState
-            icon={Calendar}
-            title="No Appointments Scheduled"
-            description="Customer bookings, time slots, assigned service advisors, and intake statuses will appear here once the Appointments module is live."
-            action={
-              <Link to="/app/appointments">
-                <Button variant="outline" size="sm">
-                  Open Appointments
-                </Button>
-              </Link>
-            }
-          />
-        </SectionCard>
-
-        {/* Active Service Jobs Section */}
-        <SectionCard
-          title="Active Service Jobs"
-          subtitle="Job cards currently in progress on the workshop floor"
-          action={
-            <Badge variant="outline" color="neutral" size="sm">
-              Module 5
-            </Badge>
-          }
-        >
-          <EmptyState
-            icon={ClipboardList}
-            title="No Active Job Cards"
-            description="Work orders awaiting parts, in-progress repairs, diagnostic checklists, and technician assignments will display here when job cards are created."
-            action={
-              <Link to="/app/service-jobs">
-                <Button variant="outline" size="sm">
-                  Open Service Jobs
-                </Button>
-              </Link>
-            }
-          />
-        </SectionCard>
-      </div>
-
-      {/* ── Section C.4: Recent Workshop Activity ─────────────────────── */}
-      <SectionCard
-        title="Recent Workshop Activity"
-        subtitle="Audit log of work order state transitions, parts issued, and customer updates"
-        action={
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-success inline-block animate-pulse" />
-            <span className="text-caption text-text-muted font-mono">Stream Ready</span>
-          </div>
-        }
-      >
-        <EmptyState
-          icon={Activity}
-          title="Activity Stream Standing By"
-          description="Operational events (such as appointment confirmations, mechanic job completions, inventory threshold alerts, and invoice payments) will stream in real time via Socket.IO push updates."
-          action={
-            <Link to="/app/reports">
-              <Button variant="outline" size="sm">
-                View Reports Module
-              </Button>
-            </Link>
-          }
-        />
-      </SectionCard>
-    </div>
+    <Page title={`${greeting}, ${user.name.split(' ')[0]}`} description={role === 'customer' ? 'Your vehicles, bookings and service status.' : 'Live overview of workshop operations.'}
+      actions={canAdd ? <><LinkButton to="/app/appointments" variant="outline" size="sm" icon={<CalendarDays size={15} />}>New booking</LinkButton><LinkButton to="/app/service-jobs" size="sm" icon={<Plus size={15} />}>New job card</LinkButton></> : role === 'customer' ? <LinkButton to="/app/appointments" size="sm" icon={<Plus size={15} />}>Book a service</LinkButton> : null}>
+      {res.error && <ErrorState title="Couldn't load the dashboard" message={res.error} action={<Button size="sm" variant="outline" onClick={res.reload}>Try again</Button>} />}
+      {res.loading && !d && <><div className="grid gap-4 grid-cols-2 lg:grid-cols-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></div><Skeleton className="h-64 w-full" /></>}
+      {d?.kind === 'staff' && <StaffDashboard d={d} />}
+      {d?.kind === 'customer' && <CustomerDashboard d={d} />}
+      {d?.kind === 'mechanic' && <MechanicDashboard d={d} />}
+    </Page>
   );
 }
